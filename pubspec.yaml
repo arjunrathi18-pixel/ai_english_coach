@@ -1,0 +1,26 @@
+name: ai_english_coach
+description: AI English Speaking Coach - voice-first AI English tutor app
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  http: ^1.2.0
+  speech_to_text: ^7.0.0
+  flutter_tts: ^4.0.2
+  shared_preferences: ^2.2.2
+  provider: ^6.1.1
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
