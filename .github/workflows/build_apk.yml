@@ -1,0 +1,44 @@
+name: Build Android APK
+
+# Runs automatically on every push to main, and can also be triggered
+# manually from the GitHub Actions tab ("Run workflow" button).
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # IMPORTANT: this passes your Anthropic API key from a GitHub Actions
+      # secret into the build, so it is never committed to the repo.
+      # Set it under: Repo -> Settings -> Secrets and variables -> Actions
+      # -> New repository secret -> name it ANTHROPIC_API_KEY.
+      - name: Build debug APK
+        run: flutter build apk --debug --dart-define=ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
