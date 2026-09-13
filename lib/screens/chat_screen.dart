@@ -8,7 +8,11 @@ import 'chat_bubble.dart';
 import 'mode_selector.dart';
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+  /// Optional level from a completed assessment (e.g. "B1"). When provided,
+  /// the session starts pre-tuned to that level instead of "unknown".
+  final String? initialEstimatedLevel;
+
+  const ChatScreen({super.key, this.initialEstimatedLevel});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -29,6 +33,11 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialEstimatedLevel != null) {
+      _settings = _settings.copyWith(
+        estimatedLevel: widget.initialEstimatedLevel,
+      );
+    }
     _speechService.init();
     _messages.add(ChatMessage(
       text: "Hey! I'm your English speaking coach. We can just chat — "
