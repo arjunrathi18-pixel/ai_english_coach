@@ -8,11 +8,17 @@ class SessionSettings {
   String estimatedLevel; // A0..C2 or "unknown"
   String accent; // indian | american | british
 
+  /// Set by the Personalized Learning Engine (Prompt 3) when the learner
+  /// starts a specific generated session — e.g. "Roleplay: workplace small
+  /// talk, practicing follow-up questions." Null during free conversation.
+  String? sessionFocus;
+
   SessionSettings({
     this.mode = 'friend',
     this.correctionMode = 'smart',
     this.estimatedLevel = 'unknown',
     this.accent = 'indian',
+    this.sessionFocus,
   });
 
   SessionSettings copyWith({
@@ -20,12 +26,14 @@ class SessionSettings {
     String? correctionMode,
     String? estimatedLevel,
     String? accent,
+    String? sessionFocus,
   }) {
     return SessionSettings(
       mode: mode ?? this.mode,
       correctionMode: correctionMode ?? this.correctionMode,
       estimatedLevel: estimatedLevel ?? this.estimatedLevel,
       accent: accent ?? this.accent,
+      sessionFocus: sessionFocus ?? this.sessionFocus,
     );
   }
 }
