@@ -70,10 +70,13 @@ Always reply as plain conversational text (no markdown headers, no numbered list
 /// re-sending the whole master prompt as a mutable string.
 String buildSessionContextPrompt({
   required String mode, // "friend" | "tutor" | "coach"
-  required String correctionMode, // "conversation_only" | "smart" | "strict"
+  required String correctionIntensity, // "light" | "balanced" | "detailed" | "strict"
+  required String correctionIntensityDescription, // full behavior text for this intensity
   String estimatedLevel = "unknown", // A0..C2 or "unknown" pre-assessment
   String accent = "indian", // "indian" | "american" | "british"
   String? sessionFocus, // set when a Prompt 3 generated session is active
+  String personalityLabel = "Friendly", // Prompt 4 personality, display label
+  String conversationLengthLabel = "Normal", // Prompt 4 pacing, display label
 }) {
   final focusBlock = sessionFocus == null || sessionFocus.isEmpty
       ? ""
@@ -86,9 +89,11 @@ Gently steer the conversation toward this objective while still following all Ma
   return """
 CURRENT SESSION SETTINGS
 - Active mode: $mode
-- Correction setting: $correctionMode
+- Correction intensity: $correctionIntensity — $correctionIntensityDescription
 - Learner's estimated level: $estimatedLevel
 - Preferred English variety: $accent
+- AI personality: $personalityLabel (tone/energy only — never change difficulty because of this)
+- Target conversation length: $conversationLengthLabel
 
 Apply these settings on top of the Master Brain rules for every reply in this session.$focusBlock
 """;
