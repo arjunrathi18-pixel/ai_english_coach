@@ -7,6 +7,26 @@ import 'speech_service.dart';
 import 'chat_bubble.dart';
 import 'mode_selector.dart';
 import 'daily_session.dart';
+import 'ai_personality.dart';
+import 'conversation_length.dart';
+import 'correction_intensity.dart';
+import 'conversation_summary_service.dart';
+import 'conversation_summary_screen.dart';
+
+/// Conversation games (Prompt 4, section 33) — each maps to a natural
+/// opening line sent as if the learner asked to play it.
+const Map<String, String> _kConversationGames = {
+  'Would You Rather': "Let's play Would You Rather.",
+  'Two Truths and a Lie': "Let's play Two Truths and a Lie.",
+  'Describe and Guess': "Let's play Describe and Guess.",
+  'Story Chain': "Let's play a Story Chain together.",
+  '20 Questions': "Let's play 20 Questions.",
+  'Rapid Response': "Let's do a Rapid Response round.",
+  'Word Association': "Let's play Word Association.",
+  'Finish the Story': "Give me the start of a story and I'll finish it.",
+  'Debate Challenge': "Let's do a Debate Challenge.",
+  'Situation Challenge': "Give me a Situation Challenge to handle.",
+};
 
 class ChatScreen extends StatefulWidget {
   /// Optional level from a completed assessment (e.g. "B1"). When provided,
@@ -32,12 +52,14 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<ChatMessage> _messages = [];
   final AiTutorService _aiService = AiTutorService();
   final SpeechService _speechService = SpeechService();
+  final ConversationSummaryService _summaryService = ConversationSummaryService();
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
   SessionSettings _settings = SessionSettings();
   bool _isThinking = false;
   bool _isListening = false;
+  bool _isEnding = false;
   String _liveTranscript = '';
 
   @override
@@ -144,6 +166,135 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() => _settings = _settings.copyWith(mode: mode));
   }
 
+  void _startGame(String gameName) {
+    Navigator.of(context).pop(); // close the menu
+    _sendMessage(_kConversationGames[gameName]!);
+  }
+
+  Future<void> _openChatSettings() async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('AI Personality',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: AiPersonality.values.map((p) {
+                      return ChoiceChip(
+                        label: Text(p.label),
+                        selected: _settings.personality == p,
+                        onSelected: (_) {
+                          setSheetState(() {});
+                          setState(() => _settings = _settings.copyWith(personality: p));
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text('Conversation Length',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: ConversationLength.values.map((l) {
+                      return ChoiceChip(
+                        label: Text('${l.label} (${l.description})'),
+                        selected: _settings.conversationLength == l,
+                        onSelected: (_) {
+                          setSheetState(() {});
+                          setState(() => _settings = _settings.copyWith(conversationLength: l));
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text('Correction Intensity',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: CorrectionIntensity.values.map((c) {
+                      return ChoiceChip(
+                        label: Text(c.label),
+                        selected: _settings.correctionIntensity == c,
+                        onSelected: (_) {
+                          setSheetState(() {});
+                          setState(() => _settings = _settings.copyWith(correctionIntensity: c));
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _openGamesMenu() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: _kConversationGames.keys
+                .map((game) => ListTile(
+                      leading: const Icon(Icons.sports_esports_outlined),
+                      title: Text(game),
+                      onTap: () => _startGame(game),
+                    ))
+                .toList(),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _endSessionAndGetFeedback() async {
+    if (_messages.length < 3) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Chat a bit more before ending for feedback.')),
+      );
+      return;
+    }
+
+    setState(() => _isEnding = true);
+    final summary = await _summaryService.getSummary(_messages);
+    setState(() => _isEnding = false);
+
+    if (summary == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not generate feedback — please try again.')),
+      );
+      return;
+    }
+
+    await _summaryService.saveRecurringMistakes(summary.recurringMistakes);
+
+    if (!mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => ConversationSummaryScreen(summary: summary)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -151,6 +302,29 @@ class _ChatScreenState extends State<ChatScreen> {
         title: Text(widget.sessionPlan != null
             ? widget.sessionPlan!.lessonType
             : 'Speak with your Coach'),
+        actions: [
+          IconButton(
+            tooltip: 'Conversation games',
+            onPressed: _openGamesMenu,
+            icon: const Icon(Icons.sports_esports_outlined),
+          ),
+          IconButton(
+            tooltip: 'Personality & length',
+            onPressed: _openChatSettings,
+            icon: const Icon(Icons.tune),
+          ),
+          IconButton(
+            tooltip: 'End session & get feedback',
+            onPressed: _isEnding ? null : _endSessionAndGetFeedback,
+            icon: _isEnding
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.flag_outlined),
+          ),
+        ],
       ),
       body: Column(
         children: [
