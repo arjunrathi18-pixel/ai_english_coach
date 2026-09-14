@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'chat_screen.dart';
 import 'assessment_screen.dart';
+import 'goal_selector_screen.dart';
+import 'roadmap_screen.dart';
 import 'learner_profile.dart';
+import 'curriculum.dart';
 import 'profile_store.dart';
+import 'curriculum_store.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,18 +17,21 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   LearnerProfile? _profile;
+  LearningRoadmap? _roadmap;
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadProfile();
+    _loadState();
   }
 
-  Future<void> _loadProfile() async {
+  Future<void> _loadState() async {
     final profile = await ProfileStore.load();
+    final roadmap = await CurriculumStore.loadRoadmap();
     setState(() {
       _profile = profile;
+      _roadmap = roadmap;
       _loading = false;
     });
   }
@@ -49,7 +56,8 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 12),
               if (!_loading && _profile != null)
                 Text(
-                  'Your level: ${_profile!.overallLevel}',
+                  'Your level: ${_profile!.overallLevel}'
+                  '${_roadmap != null ? "  →  Target: ${_roadmap!.targetLevel}" : ""}',
                   style: const TextStyle(color: Colors.black54),
                 ),
               const SizedBox(height: 32),
@@ -66,6 +74,27 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: const Icon(Icons.chat_bubble_outline),
                 label: const Text('Start Speaking'),
               ),
+              const SizedBox(height: 12),
+              if (_roadmap != null)
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const RoadmapScreen()),
+                    );
+                  },
+                  icon: const Icon(Icons.map_outlined),
+                  label: const Text('My Learning Plan'),
+                )
+              else if (_profile != null)
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const GoalSelectorScreen()),
+                    );
+                  },
+                  icon: const Icon(Icons.flag_outlined),
+                  label: const Text('Set My Learning Goal'),
+                ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: () {
