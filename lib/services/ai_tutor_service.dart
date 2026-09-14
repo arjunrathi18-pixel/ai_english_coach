@@ -18,6 +18,7 @@ class AiTutorService {
           correctionMode: settings.correctionMode,
           estimatedLevel: settings.estimatedLevel,
           accent: settings.accent,
+          sessionFocus: settings.sessionFocus,
         );
 
     final messages = history
