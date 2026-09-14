@@ -3,6 +3,8 @@ import 'chat_screen.dart';
 import 'assessment_screen.dart';
 import 'goal_selector_screen.dart';
 import 'roadmap_screen.dart';
+import 'say_it_better_screen.dart';
+import 'my_mistakes_screen.dart';
 import 'learner_profile.dart';
 import 'curriculum.dart';
 import 'profile_store.dart';
@@ -39,7 +41,25 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('AI English Coach')),
+      appBar: AppBar(
+        title: const Text('AI English Coach'),
+        actions: [
+          IconButton(
+            tooltip: 'Say It Better',
+            icon: const Icon(Icons.auto_fix_high_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SayItBetterScreen()),
+            ),
+          ),
+          IconButton(
+            tooltip: 'My Mistakes',
+            icon: const Icon(Icons.checklist_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const MyMistakesScreen()),
+            ),
+          ),
+        ],
+      ),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
