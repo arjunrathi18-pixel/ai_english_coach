@@ -73,7 +73,16 @@ String buildSessionContextPrompt({
   required String correctionMode, // "conversation_only" | "smart" | "strict"
   String estimatedLevel = "unknown", // A0..C2 or "unknown" pre-assessment
   String accent = "indian", // "indian" | "american" | "british"
+  String? sessionFocus, // set when a Prompt 3 generated session is active
 }) {
+  final focusBlock = sessionFocus == null || sessionFocus.isEmpty
+      ? ""
+      : """
+
+TODAY'S LESSON FOCUS (from the Personalized Learning Engine)
+$sessionFocus
+Gently steer the conversation toward this objective while still following all Master Brain rules above — stay natural, don't force it if the learner wants to talk about something else first.""";
+
   return """
 CURRENT SESSION SETTINGS
 - Active mode: $mode
@@ -81,6 +90,6 @@ CURRENT SESSION SETTINGS
 - Learner's estimated level: $estimatedLevel
 - Preferred English variety: $accent
 
-Apply these settings on top of the Master Brain rules for every reply in this session.
+Apply these settings on top of the Master Brain rules for every reply in this session.$focusBlock
 """;
 }
