@@ -7,6 +7,7 @@ import 'say_it_better_screen.dart';
 import 'my_mistakes_screen.dart';
 import 'pronunciation_hub_screen.dart';
 import 'vocabulary_screen.dart';
+import 'listening_screen.dart';
 import 'learner_profile.dart';
 import 'curriculum.dart';
 import 'profile_store.dart';
@@ -124,6 +125,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: const Icon(Icons.flag_outlined),
                   label: const Text('Set My Learning Goal'),
                 ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ListeningScreen()),
+                  );
+                },
+                icon: const Icon(Icons.headphones_outlined),
+                label: const Text('Listening Practice'),
+              ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: () {
