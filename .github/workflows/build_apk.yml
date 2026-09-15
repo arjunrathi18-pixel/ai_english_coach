@@ -29,18 +29,27 @@ jobs:
 
       # This repo only contains lib/ + pubspec.yaml — the platform
       # scaffolding (android/, ios/, etc.) that `flutter create` normally
-      # generates is NOT committed. If it's missing, generate it now.
-      # Run on an existing project directory, `flutter create .` only ADDS
-      # the missing platform folders — it does not touch or overwrite your
-      # existing lib/ or pubspec.yaml.
-      - name: Generate missing platform scaffolding if needed
+      # generates is NOT committed. Always regenerate android/ fresh on
+      # every build so a stale/partial folder (e.g. one that only has a
+      # hand-added AndroidManifest.xml) can never cause a "deleted v1
+      # embedding" error. This only touches the android/ folder — your
+      # lib/ and pubspec.yaml are never modified.
+      - name: Generate fresh Android platform scaffolding
         run: |
-          if [ ! -d "android" ]; then
-            echo "No android/ folder found — generating platform scaffolding..."
-            flutter create --platforms=android --org com.aienglishcoach --project-name ai_english_coach .
-          else
-            echo "android/ folder already present — skipping scaffold generation."
-          fi
+          rm -rf android
+          flutter create --platforms=android --org com.aienglishcoach --project-name ai_english_coach .
+
+      # The freshly generated manifest doesn't request microphone access,
+      # which speech_to_text needs. Insert the permissions this app
+      # requires right after the opening <manifest> tag.
+      - name: Add required permissions to the generated manifest
+        run: |
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          sed -i '/<manifest /a \
+              <uses-permission android:name="android.permission.RECORD_AUDIO" />\
+              <uses-permission android:name="android.permission.INTERNET" />\
+              <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />' "$MANIFEST"
+          cat "$MANIFEST"
 
       - name: Install dependencies
         run: flutter pub get
