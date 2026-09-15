@@ -2,6 +2,7 @@ import 'anthropic_client.dart';
 import 'system_prompts.dart';
 import 'friend_mode_prompts.dart';
 import 'teacher_correction_prompts.dart';
+import 'vocabulary_prompts.dart';
 import 'chat_message.dart';
 import 'session_settings.dart';
 
@@ -9,8 +10,8 @@ import 'session_settings.dart';
 /// Talks to the model through the shared AnthropicClient, using:
 ///  - Master Brain (Prompt 1) — always
 ///  - Friend Mode engine (Prompt 4) — only when mode == 'friend'
-///  - Teacher & Correction engine (Prompt 5) — always, calibrated by
-///    the learner's chosen correction intensity
+///  - Teacher & Correction engine (Prompt 5) — always
+///  - Vocabulary & Natural Expression awareness (Prompt 7) — always
 class AiTutorService {
   Future<String> getNextReply({
     required List<ChatMessage> history,
@@ -27,6 +28,7 @@ class AiTutorService {
     final systemPrompt = kMasterBrainPrompt +
         modeSpecificPrompt +
         "\n\n$kTeacherCorrectionPrompt" +
+        "\n\n$kVocabularyConversationPrompt" +
         "\n\n" +
         buildSessionContextPrompt(
           mode: settings.mode,
