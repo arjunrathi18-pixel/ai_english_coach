@@ -43,12 +43,18 @@ jobs:
       # resolves cleanly on newer Gradle/AGP — a very common Flutter-
       # plugin compatibility issue, not something wrong in our own code.
       # The standard community fix: force these values for every Android
-      # library subproject from the root build.gradle.
+      # library subproject from the root build.gradle. This MUST be
+      # inserted before Flutter's own `evaluationDependsOn(':app')` block,
+      # otherwise :app gets evaluated too early and afterEvaluate fails
+      # with "project is already evaluated".
       - name: Patch root build.gradle for plugin compileSdk compatibility
         run: |
-          cat >> android/build.gradle << 'GRADLE_EOF'
+          python3 - << 'PYEOF'
+          path = "android/build.gradle"
+          with open(path) as f:
+              content = f.read()
 
-          subprojects {
+          patch = """subprojects {
               afterEvaluate { proj ->
                   if (proj.hasProperty('android')) {
                       proj.android {
@@ -60,8 +66,26 @@ jobs:
                   }
               }
           }
-          GRADLE_EOF
-          cat android/build.gradle
+          """
+
+          marker = "subprojects {\n    project.evaluationDependsOn(':app')\n}"
+          if marker in content:
+              content = content.replace(marker, patch + marker)
+          else:
+              # Fallback if the template text differs slightly: insert
+              # right after the buildDir line, still before any
+              # evaluationDependsOn usage.
+              content = content.replace(
+                  "rootProject.buildDir = '../build'",
+                  "rootProject.buildDir = '../build'\n" + patch,
+                  1,
+              )
+
+          with open(path, "w") as f:
+              f.write(content)
+
+          print(content)
+          PYEOF
 
       # The freshly generated manifest doesn't request microphone access,
       # which speech_to_text needs. Insert the permissions this app
