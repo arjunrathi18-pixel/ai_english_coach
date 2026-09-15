@@ -5,6 +5,7 @@ import 'goal_selector_screen.dart';
 import 'roadmap_screen.dart';
 import 'say_it_better_screen.dart';
 import 'my_mistakes_screen.dart';
+import 'pronunciation_hub_screen.dart';
 import 'learner_profile.dart';
 import 'curriculum.dart';
 import 'profile_store.dart';
@@ -115,6 +116,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: const Icon(Icons.flag_outlined),
                   label: const Text('Set My Learning Goal'),
                 ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const PronunciationHubScreen()),
+                  );
+                },
+                icon: const Icon(Icons.record_voice_over_outlined),
+                label: const Text('Pronunciation Practice'),
+              ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: () {
