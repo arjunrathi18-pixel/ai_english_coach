@@ -27,6 +27,21 @@ jobs:
           flutter-version: '3.24.0'
           channel: 'stable'
 
+      # This repo only contains lib/ + pubspec.yaml — the platform
+      # scaffolding (android/, ios/, etc.) that `flutter create` normally
+      # generates is NOT committed. If it's missing, generate it now.
+      # Run on an existing project directory, `flutter create .` only ADDS
+      # the missing platform folders — it does not touch or overwrite your
+      # existing lib/ or pubspec.yaml.
+      - name: Generate missing platform scaffolding if needed
+        run: |
+          if [ ! -d "android" ]; then
+            echo "No android/ folder found — generating platform scaffolding..."
+            flutter create --platforms=android --org com.aienglishcoach --project-name ai_english_coach .
+          else
+            echo "android/ folder already present — skipping scaffold generation."
+          fi
+
       - name: Install dependencies
         run: flutter pub get
 
