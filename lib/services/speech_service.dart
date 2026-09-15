@@ -100,6 +100,14 @@ class SpeechService {
     await _tts.speak(text);
   }
 
+  /// Sets TTS speaking rate for listening practice (Prompt 8, section 24).
+  /// Typical flutter_tts range is roughly 0.0-1.0; 0.45 is our normal
+  /// conversational default (see init()) — values below that sound
+  /// slower, above sound faster/more natural-fast.
+  Future<void> setSpeechRate(double rate) async {
+    await _tts.setSpeechRate(rate);
+  }
+
   Future<void> stopSpeaking() async {
     await _tts.stop();
   }
