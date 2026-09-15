@@ -30,14 +30,38 @@ jobs:
       # This repo only contains lib/ + pubspec.yaml — the platform
       # scaffolding (android/, ios/, etc.) that `flutter create` normally
       # generates is NOT committed. Always regenerate android/ fresh on
-      # every build so a stale/partial folder (e.g. one that only has a
-      # hand-added AndroidManifest.xml) can never cause a "deleted v1
-      # embedding" error. This only touches the android/ folder — your
+      # every build so a stale/partial folder can never cause a "deleted
+      # v1 embedding" error. This only touches the android/ folder — your
       # lib/ and pubspec.yaml are never modified.
       - name: Generate fresh Android platform scaffolding
         run: |
           rm -rf android
           flutter create --platforms=android --org com.aienglishcoach --project-name ai_english_coach .
+
+      # Some plugins (e.g. speech_to_text) ship an android/build.gradle
+      # that doesn't declare compileSdkVersion/namespace in a way that
+      # resolves cleanly on newer Gradle/AGP — a very common Flutter-
+      # plugin compatibility issue, not something wrong in our own code.
+      # The standard community fix: force these values for every Android
+      # library subproject from the root build.gradle.
+      - name: Patch root build.gradle for plugin compileSdk compatibility
+        run: |
+          cat >> android/build.gradle << 'GRADLE_EOF'
+
+          subprojects {
+              afterEvaluate { proj ->
+                  if (proj.hasProperty('android')) {
+                      proj.android {
+                          if (namespace == null) {
+                              namespace proj.group
+                          }
+                          compileSdkVersion 34
+                      }
+                  }
+              }
+          }
+          GRADLE_EOF
+          cat android/build.gradle
 
       # The freshly generated manifest doesn't request microphone access,
       # which speech_to_text needs. Insert the permissions this app
