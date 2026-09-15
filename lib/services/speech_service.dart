@@ -1,9 +1,16 @@
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
 
+import 'recognition_result.dart';
+
 /// Wraps voice input (speech-to-text) and voice output (text-to-speech)
 /// behind one simple interface. Screens should never talk to the
 /// speech_to_text / flutter_tts packages directly.
+///
+/// Per Prompt 6's honesty contract, this service is the single source of
+/// "observed data" for pronunciation features: transcript, confidence,
+/// alternatives, and whether audio was captured at all. It never invents
+/// acoustic measurements the underlying plugin doesn't actually provide.
 class SpeechService {
   final stt.SpeechToText _speechToText = stt.SpeechToText();
   final FlutterTts _tts = FlutterTts();
@@ -21,7 +28,8 @@ class SpeechService {
 
   bool get isAvailable => _speechEnabled;
 
-  /// Starts listening. [onResult] fires with partial + final transcripts.
+  /// Simple listening for ordinary conversation (chat_screen.dart) — just
+  /// the recognized text, no observed-data detail needed there.
   Future<void> startListening({
     required void Function(String recognizedWords) onResult,
   }) async {
@@ -29,6 +37,36 @@ class SpeechService {
     await _speechToText.listen(
       onResult: (result) => onResult(result.recognizedWords),
       listenFor: const Duration(seconds: 30),
+      pauseFor: const Duration(seconds: 3),
+      partialResults: true,
+    );
+  }
+
+  /// Richer listening for pronunciation features (shadowing, word
+  /// practice): surfaces every piece of "observed data" the recognizer
+  /// actually provides — transcript, confidence, alternates — so the
+  /// pronunciation engine can reason honestly instead of guessing.
+  Future<void> startListeningDetailed({
+    required void Function(RecognitionResult result) onResult,
+  }) async {
+    if (!_speechEnabled) {
+      onResult(RecognitionResult.unavailable());
+      return;
+    }
+    await _speechToText.listen(
+      onResult: (result) {
+        onResult(RecognitionResult(
+          transcript: result.recognizedWords,
+          confidence: result.confidence,
+          alternates: result.alternates
+              .map((a) => a.recognizedWords)
+              .where((w) => w.isNotEmpty)
+              .toList(),
+          isFinal: result.finalResult,
+          audioAvailable: true,
+        ));
+      },
+      listenFor: const Duration(seconds: 15),
       pauseFor: const Duration(seconds: 3),
       partialResults: true,
     );
