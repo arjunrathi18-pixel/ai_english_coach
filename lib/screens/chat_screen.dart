@@ -149,7 +149,7 @@ class _ChatScreenState extends State<ChatScreen> {
       if (!ok) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Microphone permission is needed for voice practice.'),
+            content: Text('Voice input is temporarily unavailable — please type instead.'),
           ),
         );
         return;
