@@ -1,82 +1,49 @@
-import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
 
 import 'recognition_result.dart';
 
-/// Wraps voice input (speech-to-text) and voice output (text-to-speech)
-/// behind one simple interface. Screens should never talk to the
-/// speech_to_text / flutter_tts packages directly.
+/// Wraps voice input (speech-to-text) and voice output (text-to-speech).
 ///
-/// Per Prompt 6's honesty contract, this service is the single source of
-/// "observed data" for pronunciation features: transcript, confidence,
-/// alternatives, and whether audio was captured at all. It never invents
-/// acoustic measurements the underlying plugin doesn't actually provide.
+/// TEMPORARY STATUS: mic-based voice input is disabled for now — the
+/// `speech_to_text` plugin has an unresolved Android Gradle/compileSdk
+/// compatibility issue with current tooling that was blocking APK builds
+/// entirely (a plugin-ecosystem issue, not something wrong in this app's
+/// own code). Voice OUTPUT (text-to-speech) is unaffected and works
+/// normally. Every screen that uses the mic already checks
+/// `isAvailable`/`init()` and falls back to text input gracefully, so
+/// disabling this here doesn't crash anything — it just means the mic
+/// button shows a "not available" message until this is re-enabled.
+///
+/// TO RE-ENABLE LATER: add `speech_to_text` back to pubspec.yaml (try a
+/// specific pinned version rather than a caret range), restore the
+/// `stt.SpeechToText` implementation below, and remove this notice.
 class SpeechService {
-  final stt.SpeechToText _speechToText = stt.SpeechToText();
   final FlutterTts _tts = FlutterTts();
-  bool _speechEnabled = false;
 
   Future<bool> init() async {
-    _speechEnabled = await _speechToText.initialize(
-      onError: (error) => print('Speech error: $error'),
-      onStatus: (status) => print('Speech status: $status'),
-    );
     await _tts.setSpeechRate(0.45); // slightly slower for learners
     await _tts.setPitch(1.0);
-    return _speechEnabled;
+    return false; // mic input temporarily disabled — see class doc above
   }
 
-  bool get isAvailable => _speechEnabled;
+  bool get isAvailable => false;
 
-  /// Simple listening for ordinary conversation (chat_screen.dart) — just
-  /// the recognized text, no observed-data detail needed there.
   Future<void> startListening({
     required void Function(String recognizedWords) onResult,
   }) async {
-    if (!_speechEnabled) return;
-    await _speechToText.listen(
-      onResult: (result) => onResult(result.recognizedWords),
-      listenFor: const Duration(seconds: 30),
-      pauseFor: const Duration(seconds: 3),
-      partialResults: true,
-    );
+    // No-op: voice input temporarily disabled. Screens should check
+    // isAvailable/init() before calling this and show text input instead.
   }
 
-  /// Richer listening for pronunciation features (shadowing, word
-  /// practice): surfaces every piece of "observed data" the recognizer
-  /// actually provides — transcript, confidence, alternates — so the
-  /// pronunciation engine can reason honestly instead of guessing.
   Future<void> startListeningDetailed({
     required void Function(RecognitionResult result) onResult,
   }) async {
-    if (!_speechEnabled) {
-      onResult(RecognitionResult.unavailable());
-      return;
-    }
-    await _speechToText.listen(
-      onResult: (result) {
-        onResult(RecognitionResult(
-          transcript: result.recognizedWords,
-          confidence: result.confidence,
-          alternates: result.alternates
-              .map((a) => a.recognizedWords)
-              .where((w) => w.isNotEmpty)
-              .toList(),
-          isFinal: result.finalResult,
-          audioAvailable: true,
-        ));
-      },
-      listenFor: const Duration(seconds: 15),
-      pauseFor: const Duration(seconds: 3),
-      partialResults: true,
-    );
+    onResult(RecognitionResult.unavailable());
   }
 
-  Future<void> stopListening() async {
-    await _speechToText.stop();
-  }
+  Future<void> stopListening() async {}
 
-  bool get isListening => _speechToText.isListening;
+  bool get isListening => false;
 
   /// Sets TTS voice/locale based on the selected English variety.
   /// Actual voice availability depends on the device's installed TTS voices.
@@ -101,9 +68,6 @@ class SpeechService {
   }
 
   /// Sets TTS speaking rate for listening practice (Prompt 8, section 24).
-  /// Typical flutter_tts range is roughly 0.0-1.0; 0.45 is our normal
-  /// conversational default (see init()) — values below that sound
-  /// slower, above sound faster/more natural-fast.
   Future<void> setSpeechRate(double rate) async {
     await _tts.setSpeechRate(rate);
   }
