@@ -39,14 +39,12 @@ jobs:
           flutter create --platforms=android --org com.aienglishcoach --project-name ai_english_coach .
 
       # Some plugins (e.g. speech_to_text) ship an android/build.gradle
-      # that doesn't declare compileSdkVersion/namespace in a way that
-      # resolves cleanly on newer Gradle/AGP — a very common Flutter-
-      # plugin compatibility issue, not something wrong in our own code.
-      # The standard community fix: force these values for every Android
-      # library subproject from the root build.gradle. This MUST be
-      # inserted before Flutter's own `evaluationDependsOn(':app')` block,
-      # otherwise :app gets evaluated too early and afterEvaluate fails
-      # with "project is already evaluated".
+      # that looks up rootProject.ext.compileSdkVersion synchronously
+      # while it configures itself — this happens BEFORE any afterEvaluate
+      # hook could run, so the fix must define this as a plain top-level
+      # ext property on the root project, not inside subprojects/
+      # afterEvaluate (a very common Flutter-plugin compatibility issue,
+      # not something wrong in our own code).
       - name: Patch root build.gradle for plugin compileSdk compatibility
         run: |
           python3 - << 'PYEOF'
@@ -54,32 +52,22 @@ jobs:
           with open(path) as f:
               content = f.read()
 
-          patch = """subprojects {
-              afterEvaluate { proj ->
-                  if (proj.hasProperty('android')) {
-                      proj.android {
-                          if (namespace == null) {
-                              namespace proj.group
-                          }
-                          compileSdkVersion 34
-                      }
-                  }
-              }
+          patch = """
+          ext {
+              compileSdkVersion = 34
+              targetSdkVersion = 34
+              minSdkVersion = 21
           }
           """
 
-          marker = "subprojects {\n    project.evaluationDependsOn(':app')\n}"
-          if marker in content:
-              content = content.replace(marker, patch + marker)
+          marker = "allprojects {"
+          idx = content.find(marker)
+          if idx != -1:
+              # Insert right before the allprojects block so it's defined
+              # as early as possible in root project evaluation.
+              content = content[:idx] + patch.strip() + "\n\n" + content[idx:]
           else:
-              # Fallback if the template text differs slightly: insert
-              # right after the buildDir line, still before any
-              # evaluationDependsOn usage.
-              content = content.replace(
-                  "rootProject.buildDir = '../build'",
-                  "rootProject.buildDir = '../build'\n" + patch,
-                  1,
-              )
+              content = patch.strip() + "\n\n" + content
 
           with open(path, "w") as f:
               f.write(content)
