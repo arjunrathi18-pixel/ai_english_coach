@@ -5,6 +5,9 @@ import 'teacher_correction_prompts.dart';
 import 'vocabulary_prompts.dart';
 import 'chat_message.dart';
 import 'session_settings.dart';
+import 'correction_intensity.dart';
+import 'ai_personality.dart';
+import 'conversation_length.dart';
 
 /// Handles the everyday tutor conversation (Friend/Tutor/Coach modes).
 /// Talks to the model through the shared AnthropicClient, using:
