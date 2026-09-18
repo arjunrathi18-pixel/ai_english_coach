@@ -7,6 +7,7 @@ import 'roleplay_service.dart';
 import 'roleplay_feedback_screen.dart';
 import 'speech_service.dart';
 import 'session_settings.dart';
+import 'correction_intensity.dart';
 
 class RoleplayScreen extends StatefulWidget {
   final RoleplayScenario scenario;
