@@ -4,6 +4,7 @@ import 'roleplay_service.dart';
 import 'roleplay_screen.dart';
 import 'profile_store.dart';
 import 'curriculum_store.dart';
+import 'learning_goal.dart';
 
 class RoleplaySetupScreen extends StatefulWidget {
   const RoleplaySetupScreen({super.key});
