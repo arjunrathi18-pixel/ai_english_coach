@@ -102,14 +102,22 @@ jobs:
           cat "$APP_GRADLE"
 
       # flutter_tts and shared_preferences_android fail to compile their
-      # Kotlin sources against the old Kotlin Gradle plugin version
-      # bundled in Flutter's default project template. Bump it to a
-      # modern, widely-compatible version.
-      - name: Raise Kotlin Gradle plugin version
+      # Kotlin sources against the old Kotlin/AGP/Gradle combination
+      # bundled in Flutter's default project template. These three must
+      # move together as a compatible set — bumping only Kotlin (as done
+      # in an earlier version of this workflow) breaks because the old
+      # AGP version is then too low for it. Use a well-established
+      # compatible trio: Gradle 8.4 + AGP 8.3.0 + Kotlin 1.9.22.
+      - name: Raise Gradle/AGP/Kotlin versions to a compatible set
         run: |
           SETTINGS_GRADLE=android/settings.gradle
-          sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "2.1.0"/' "$SETTINGS_GRADLE"
+          sed -i 's/id "com.android.application" version "[^"]*"/id "com.android.application" version "8.3.0"/' "$SETTINGS_GRADLE"
+          sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "1.9.22"/' "$SETTINGS_GRADLE"
           cat "$SETTINGS_GRADLE"
+
+          WRAPPER_PROPS=android/gradle/wrapper/gradle-wrapper.properties
+          sed -i 's#distributionUrl=.*#distributionUrl=https\\://services.gradle.org/distributions/gradle-8.4-all.zip#' "$WRAPPER_PROPS"
+          cat "$WRAPPER_PROPS"
 
       - name: Install dependencies
         run: flutter pub get
