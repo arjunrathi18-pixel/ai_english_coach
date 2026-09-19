@@ -101,6 +101,42 @@ jobs:
           sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 24/' "$APP_GRADLE"
           cat "$APP_GRADLE"
 
+      # R8 (the release-build code shrinker bundled with this AGP version)
+      # cannot parse the newer Kotlin 2.1.0 metadata format used by
+      # shared_preferences_android's compiled classes — a real R8/Kotlin
+      # version-lag issue, not something wrong in our code. Disable
+      # minification/shrinking for the release build type so R8 never
+      # runs; the release APK will be a bit larger but fully functional.
+      - name: Disable R8 minification for release builds
+        run: |
+          python3 - << 'PYEOF'
+          import re
+          path = "android/app/build.gradle"
+          with open(path) as f:
+              content = f.read()
+          before = content
+
+          # If minifyEnabled/shrinkResources are already set to true, force false.
+          content = re.sub(r'minifyEnabled\s+true', 'minifyEnabled false', content)
+          content = re.sub(r'shrinkResources\s+true', 'shrinkResources false', content)
+
+          # If there's no minifyEnabled line at all yet, insert one right
+          # after the "release {" block opener.
+          if 'minifyEnabled' not in content:
+              content = re.sub(
+                  r'(release\s*\{)',
+                  r'\1\n            minifyEnabled false\n            shrinkResources false',
+                  content,
+                  count=1,
+              )
+
+          if content == before:
+              print("WARNING: no changes applied to app/build.gradle for R8 disable!")
+          with open(path, 'w') as f:
+              f.write(content)
+          print(content)
+          PYEOF
+
       # flutter_tts and shared_preferences_android fail to compile their
       # Kotlin sources against the old Kotlin/AGP/Gradle combination
       # bundled in Flutter's default project template. flutter_tts 4.2.5
