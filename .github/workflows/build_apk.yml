@@ -103,16 +103,17 @@ jobs:
 
       # flutter_tts and shared_preferences_android fail to compile their
       # Kotlin sources against the old Kotlin/AGP/Gradle combination
-      # bundled in Flutter's default project template. These three must
-      # move together as a compatible set — bumping only Kotlin (as done
-      # in an earlier version of this workflow) breaks because the old
-      # AGP version is then too low for it. Use a well-established
-      # compatible trio: Gradle 8.4 + AGP 8.3.0 + Kotlin 1.9.22.
+      # bundled in Flutter's default project template. flutter_tts 4.2.5
+      # specifically requires a modern Kotlin compiler (2.x) — Kotlin
+      # 1.9.x cannot even resolve its own stdlib references there. AGP
+      # just needs to be new enough for Kotlin's own compatibility gate
+      # (>=7.3.1) — it does not need to be the newest possible. Use:
+      # Gradle 8.4 + AGP 8.3.0 + Kotlin 2.1.0.
       - name: Raise Gradle/AGP/Kotlin versions to a compatible set
         run: |
           SETTINGS_GRADLE=android/settings.gradle
           sed -i 's/id "com.android.application" version "[^"]*"/id "com.android.application" version "8.3.0"/' "$SETTINGS_GRADLE"
-          sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "1.9.22"/' "$SETTINGS_GRADLE"
+          sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "2.1.0"/' "$SETTINGS_GRADLE"
           cat "$SETTINGS_GRADLE"
 
           WRAPPER_PROPS=android/gradle/wrapper/gradle-wrapper.properties
