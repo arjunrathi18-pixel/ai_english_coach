@@ -54,8 +54,8 @@ jobs:
 
           patch = """
           ext {
-              compileSdkVersion = 36
-              targetSdkVersion = 36
+              compileSdkVersion = 34
+              targetSdkVersion = 34
               minSdkVersion = 24
           }
           """
@@ -87,17 +87,29 @@ jobs:
               <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />' "$MANIFEST"
           cat "$MANIFEST"
 
-      # flutter_tts requires compiling against Android SDK 36 and a
-      # minimum SDK of 24, both higher than this Flutter version's
-      # defaults. Force :app's own compileSdk/targetSdk/minSdk explicitly
-      # rather than relying on the flutter.* defaults.
-      - name: Raise app-level compileSdk/targetSdk/minSdk for plugin requirements
+      # flutter_tts's *warning* suggests compiling against SDK 36, but
+      # that's optional guidance, not a hard requirement — and this CI
+      # runner's cached build-tools are too old to parse the newer SDK 36
+      # platform jar (a real toolchain incompatibility, not our code).
+      # Keep compileSdk/targetSdk at the well-supported 34 and only force
+      # minSdk up to 24, which flutter_tts's manifest genuinely requires.
+      - name: Raise app-level minSdk for plugin requirements
         run: |
           APP_GRADLE=android/app/build.gradle
-          sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 36/' "$APP_GRADLE"
-          sed -i 's/targetSdk = flutter.targetSdkVersion/targetSdk = 36/' "$APP_GRADLE"
+          sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 34/' "$APP_GRADLE"
+          sed -i 's/targetSdk = flutter.targetSdkVersion/targetSdk = 34/' "$APP_GRADLE"
           sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 24/' "$APP_GRADLE"
           cat "$APP_GRADLE"
+
+      # flutter_tts and shared_preferences_android fail to compile their
+      # Kotlin sources against the old Kotlin Gradle plugin version
+      # bundled in Flutter's default project template. Bump it to a
+      # modern, widely-compatible version.
+      - name: Raise Kotlin Gradle plugin version
+        run: |
+          SETTINGS_GRADLE=android/settings.gradle
+          sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "2.1.0"/' "$SETTINGS_GRADLE"
+          cat "$SETTINGS_GRADLE"
 
       - name: Install dependencies
         run: flutter pub get
