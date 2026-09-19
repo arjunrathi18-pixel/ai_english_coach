@@ -104,21 +104,52 @@ jobs:
       # flutter_tts and shared_preferences_android fail to compile their
       # Kotlin sources against the old Kotlin/AGP/Gradle combination
       # bundled in Flutter's default project template. flutter_tts 4.2.5
-      # specifically requires a modern Kotlin compiler (2.x) — Kotlin
-      # 1.9.x cannot even resolve its own stdlib references there. AGP
-      # just needs to be new enough for Kotlin's own compatibility gate
-      # (>=7.3.1) — it does not need to be the newest possible. Use:
-      # Gradle 8.4 + AGP 8.3.0 + Kotlin 2.1.0.
+      # specifically requires a modern Kotlin compiler (2.x). AGP just
+      # needs to be new enough for Kotlin's own compatibility gate
+      # (>=7.3.1). Using sed here previously failed silently because it
+      # didn't match the generated file's exact quoting/spacing — this
+      # uses a regex that's tolerant of both, and prints the result so a
+      # silent non-match is visible in the log instead of hiding.
       - name: Raise Gradle/AGP/Kotlin versions to a compatible set
         run: |
-          SETTINGS_GRADLE=android/settings.gradle
-          sed -i 's/id "com.android.application" version "[^"]*"/id "com.android.application" version "8.3.0"/' "$SETTINGS_GRADLE"
-          sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "2.1.0"/' "$SETTINGS_GRADLE"
-          cat "$SETTINGS_GRADLE"
+          python3 - << 'PYEOF'
+          import re
 
-          WRAPPER_PROPS=android/gradle/wrapper/gradle-wrapper.properties
-          sed -i 's#distributionUrl=.*#distributionUrl=https\\://services.gradle.org/distributions/gradle-8.4-all.zip#' "$WRAPPER_PROPS"
-          cat "$WRAPPER_PROPS"
+          settings_path = "android/settings.gradle"
+          with open(settings_path) as f:
+              content = f.read()
+
+          before = content
+          content = re.sub(
+              r'(id\s+[\'"]com\.android\.application[\'"]\s+version\s+[\'"])[^\'"]+([\'"])',
+              r'\g<1>8.3.0\g<2>',
+              content,
+          )
+          content = re.sub(
+              r'(id\s+[\'"]org\.jetbrains\.kotlin\.android[\'"]\s+version\s+[\'"])[^\'"]+([\'"])',
+              r'\g<1>2.1.0\g<2>',
+              content,
+          )
+          if content == before:
+              print("WARNING: no changes made to settings.gradle — pattern did not match!")
+          with open(settings_path, "w") as f:
+              f.write(content)
+          print("=== settings.gradle after patch ===")
+          print(content)
+
+          wrapper_path = "android/gradle/wrapper/gradle-wrapper.properties"
+          with open(wrapper_path) as f:
+              wcontent = f.read()
+          wcontent = re.sub(
+              r'distributionUrl=.*',
+              r'distributionUrl=https\\://services.gradle.org/distributions/gradle-8.4-all.zip',
+              wcontent,
+          )
+          with open(wrapper_path, "w") as f:
+              f.write(wcontent)
+          print("=== gradle-wrapper.properties after patch ===")
+          print(wcontent)
+          PYEOF
 
       - name: Install dependencies
         run: flutter pub get
@@ -130,8 +161,23 @@ jobs:
       - name: Build debug APK
         run: flutter build apk --debug --dart-define=ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
 
-      - name: Upload APK artifact
+      # Debug APKs are large, unoptimized, and meant only for quick
+      # testing. This also builds a release APK — smaller and faster.
+      # It's signed with Flutter's default debug key (Flutter's template
+      # already points the release build type at signingConfigs.debug),
+      # which is fine for installing on your own device but NOT for
+      # publishing to the Play Store — that needs your own signing key.
+      - name: Build release APK
+        run: flutter build apk --release --dart-define=ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Upload debug APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
+
+      - name: Upload release APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
